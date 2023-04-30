@@ -12,10 +12,10 @@
     </parent>
 
     <groupId>com.LiuJian</groupId>
-    <artifactId>bi-backend</artifactId>
+    <artifactId>intelligent-bi-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
 
-    <name>bi-backend</name>
+    <name>intelligent-bi-backend</name>
 
     <properties>
         <java.version>1.8</java.version>
