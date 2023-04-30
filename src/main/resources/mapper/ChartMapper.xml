@@ -6,6 +6,7 @@
 
     <resultMap id="BaseResultMap" type="com.liujian.intelligentbi.model.entity.Chart">
             <id property="id" column="id" jdbcType="BIGINT"/>
+            <result property="userId" column="user_id" jdbcType="BIGINT"/>
             <result property="goal" column="goal" jdbcType="VARCHAR"/>
             <result property="chartData" column="chart_data" jdbcType="VARCHAR"/>
             <result property="chartType" column="chart_type" jdbcType="VARCHAR"/>
@@ -17,8 +18,9 @@
     </resultMap>
 
     <sql id="Base_Column_List">
-        id,goal,chart_data,
-        chart_type,generate_chart,generate_result,
-        create_time,update_time,is_delete
+        id,user_id,goal,
+        chart_data,chart_type,generate_chart,
+        generate_result,create_time,update_time,
+        is_delete
     </sql>
 </mapper>

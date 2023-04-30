@@ -1,22 +1,17 @@
-package com.liujian.intelligentbi.model.entity;
+package com.liujian.intelligentbi.model.dto.chart;
 
-import com.baomidou.mybatisplus.annotation.*;
-
-import java.io.Serializable;
-import java.util.Date;
 import lombok.Data;
 
+import java.io.Serializable;
+
 /**
- * 图表信息
  * @author Asynchronous
  */
-@TableName(value ="chart")
 @Data
-public class Chart implements Serializable {
+public class ChartUpdateRequest implements Serializable {
     /**
      * id
      */
-    @TableId(type = IdType.ASSIGN_ID)
     private Long id;
 
     /**
@@ -48,23 +43,5 @@ public class Chart implements Serializable {
      * 生成的分析结论
      */
     private String generateResult;
-
-    /**
-     * 创建时间
-     */
-    private Date createTime;
-
-    /**
-     * 更新时间
-     */
-    private Date updateTime;
-
-    /**
-     * 是否删除
-     */
-    @TableLogic
-    private Integer isDelete;
-
-    @TableField(exist = false)
     private static final long serialVersionUID = 1L;
 }
