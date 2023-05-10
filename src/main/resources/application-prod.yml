@@ -4,7 +4,7 @@ spring:
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://124.223.159.131:3306/intelligent_bi
+    url: jdbc:mysql://192.168.131.101:3306/intelligent_bi
     username: root
     password: root
 mybatis-plus:
