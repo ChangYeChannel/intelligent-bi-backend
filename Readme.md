@@ -17,3 +17,11 @@
 
 - 前端：React、Umi、Ant Design Pro、Echarts
 - 后端：SpringBoot、Mysql、MyBaties、RabbitMQ、AI接口、Easy Excel、Swagger + Knife4j、Hutool工具库
+
+### 项目开发记录（没有完结就是持续踩坑中 ）T.T ...
+
+- AI提词技巧
+  - 持续输入、持续优化
+  - 数据压缩（因为将数据喂给AI模型字段长度有限制，所以要尽可能的将数据进行压缩，以便传输更多的数据）
+  - 在AI模型层面做角色预设要比在会话层面做效果更好一些
+- 因为是对用户输入的表（Excel）内容进行分析，因此可以使用csv格式，对原本Excel格式的内容进行压缩

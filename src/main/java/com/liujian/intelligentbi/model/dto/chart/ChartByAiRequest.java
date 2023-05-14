@@ -1,14 +1,13 @@
 package com.liujian.intelligentbi.model.dto.chart;
 
-import lombok.Data;
 
-import java.io.Serializable;
+import lombok.Data;
 
 /**
  * @author Asynchronous
  */
 @Data
-public class ChartAddRequest implements Serializable {
+public class ChartByAiRequest {
     /**
      * 表名
      */
@@ -18,11 +17,6 @@ public class ChartAddRequest implements Serializable {
      * 分析目标
      */
     private String goal;
-
-    /**
-     * 分析数据
-     */
-    private String chartData;
 
     /**
      * 图表类型

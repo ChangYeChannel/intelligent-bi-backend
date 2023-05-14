@@ -17,6 +17,11 @@ public class ChartVO implements Serializable {
     private Long id;
 
     /**
+     * 表名
+     */
+    private String chartName;
+
+    /**
      * 用户ID
      */
     private Long userId;

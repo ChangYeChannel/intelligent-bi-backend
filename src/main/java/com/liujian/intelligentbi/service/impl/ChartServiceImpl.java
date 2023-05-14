@@ -43,11 +43,13 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         if (chartQueryRequest == null) {
             throw new BusinessException(ErrorCode.PARAMS_ERROR, "请求参数为空");
         }
+        String chartName = chartQueryRequest.getChartName();
         Long userId = chartQueryRequest.getUserId();
         String chartType = chartQueryRequest.getChartType();
         String sortField = chartQueryRequest.getSortField();
         String sortOrder = chartQueryRequest.getSortOrder();
         QueryWrapper<Chart> queryWrapper = new QueryWrapper<>();
+        queryWrapper.like(chartName != null, "chart_name", chartName);
         queryWrapper.eq(userId != null, "user_id", userId);
         queryWrapper.eq(StringUtils.isNotBlank(chartType), "chart_type", chartType);
         queryWrapper.orderBy(SqlUtils.validSortField(sortField), sortOrder.equals(CommonConstant.SORT_ORDER_ASC),
@@ -61,13 +63,14 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
             throw new BusinessException(ErrorCode.PARAMS_ERROR);
         }
 
+        String chartName = chart.getChartName();
         String goal = chart.getGoal();
         String chartData = chart.getChartData();
         String chartType = chart.getChartType();
 
         // 创建时，参数不能为空
         if (flag) {
-            ThrowUtils.throwIf(StringUtils.isAnyBlank(goal, chartData, chartType), ErrorCode.PARAMS_ERROR);
+            ThrowUtils.throwIf(StringUtils.isAnyBlank(chartName, goal, chartData, chartType), ErrorCode.PARAMS_ERROR);
         }
         // 有参数则校验
         if (StringUtils.isNotBlank(chartData) && chartData.length() > 8192) {
