@@ -2,10 +2,13 @@ package com.liujian.intelligentbi.service;
 
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
+import com.liujian.intelligentbi.model.dto.chart.ChartByAiRequest;
 import com.liujian.intelligentbi.model.dto.chart.ChartQueryRequest;
 import com.liujian.intelligentbi.model.entity.Chart;
 import com.baomidou.mybatisplus.extension.service.IService;
+import com.liujian.intelligentbi.model.vo.BIResponse;
 import com.liujian.intelligentbi.model.vo.ChartVO;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -44,4 +47,13 @@ public interface ChartService extends IService<Chart> {
      * @return  分页对象
      */
     Page<ChartVO> getChartVOPage(Page<Chart> chartPage, HttpServletRequest request);
+
+    /**
+     * 根据传入的数据，利用AI生成问题回答
+     * @param multipartFile  原始数据
+     * @param chartByAiRequest  问题封装
+     * @param request  请求对象
+     * @return  问题回答
+     */
+    BIResponse genChartByAi(MultipartFile multipartFile, ChartByAiRequest chartByAiRequest, HttpServletRequest request);
 }

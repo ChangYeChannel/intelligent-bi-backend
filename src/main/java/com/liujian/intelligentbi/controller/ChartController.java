@@ -6,21 +6,23 @@ import com.liujian.intelligentbi.common.BaseResponse;
 import com.liujian.intelligentbi.common.DeleteRequest;
 import com.liujian.intelligentbi.common.ErrorCode;
 import com.liujian.intelligentbi.common.ResultUtils;
+import com.liujian.intelligentbi.model.vo.AIEnum;
 import com.liujian.intelligentbi.constant.UserConstant;
 import com.liujian.intelligentbi.exception.BusinessException;
 import com.liujian.intelligentbi.exception.ThrowUtils;
+import com.liujian.intelligentbi.manager.AIManager;
 import com.liujian.intelligentbi.model.dto.chart.ChartAddRequest;
 import com.liujian.intelligentbi.model.dto.chart.ChartByAiRequest;
 import com.liujian.intelligentbi.model.dto.chart.ChartQueryRequest;
 import com.liujian.intelligentbi.model.dto.chart.ChartUpdateRequest;
 import com.liujian.intelligentbi.model.entity.Chart;
 import com.liujian.intelligentbi.model.entity.User;
+import com.liujian.intelligentbi.model.vo.BIResponse;
 import com.liujian.intelligentbi.model.vo.ChartVO;
 import com.liujian.intelligentbi.service.ChartService;
 import com.liujian.intelligentbi.service.UserService;
 import com.liujian.intelligentbi.utils.ExcelUtils;
 import lombok.extern.slf4j.Slf4j;
-import org.apache.commons.lang3.RandomStringUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.beans.BeanUtils;
 import org.springframework.web.bind.annotation.*;
@@ -28,7 +30,6 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.io.File;
 
 /**
  * 图表信息接口
@@ -44,6 +45,7 @@ public class ChartController {
 
     @Resource
     private UserService userService;
+
 
     /**
      * 创建
@@ -139,27 +141,9 @@ public class ChartController {
      * 接受图表数据生成分析数据方法
      */
     @PostMapping("/genChart")
-    public BaseResponse<String> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
+    public BaseResponse<BIResponse> genChartByAi(@RequestPart("file") MultipartFile multipartFile,
                                              ChartByAiRequest chartByAiRequest, HttpServletRequest request) {
-        String chartName = chartByAiRequest.getChartName();
-        String chartType = chartByAiRequest.getChartType();
-        String goal = chartByAiRequest.getGoal();
-
-        // 校验数据
-        ThrowUtils.throwIf(StringUtils.isBlank(goal) || goal.length() > 400, ErrorCode.PARAMS_ERROR, "分析目标为空或分析目标字数过长");
-        ThrowUtils.throwIf(StringUtils.isBlank(chartName) || chartName.length() > 100, ErrorCode.PARAMS_ERROR, "图标名称为空或图标名称字数过长");
-
-        // 将传入的Excel转为CSV
-        String csvData = ExcelUtils.excelToCsv(multipartFile);
-
-        // 组装数据准备喂给AI
-        StringBuilder userInput = new StringBuilder();
-        userInput.append("你是一个拥有两年半分析经验的数据分析师,请根据我给出的分析目标和数据,对数据进行分析工作").append("\n");
-        userInput.append("分析目标:").append(goal).append("\n");
-        userInput.append("数据:").append(csvData).append("\n");
-
-
-        System.out.println(userInput);
-        return null;
+        BIResponse biResponse = chartService.genChartByAi(multipartFile,chartByAiRequest,request);
+        return ResultUtils.success(biResponse);
     }
 }

@@ -7,18 +7,24 @@ import com.liujian.intelligentbi.common.ErrorCode;
 import com.liujian.intelligentbi.constant.CommonConstant;
 import com.liujian.intelligentbi.exception.BusinessException;
 import com.liujian.intelligentbi.exception.ThrowUtils;
+import com.liujian.intelligentbi.manager.AIManager;
+import com.liujian.intelligentbi.model.dto.chart.ChartByAiRequest;
 import com.liujian.intelligentbi.model.dto.chart.ChartQueryRequest;
 import com.liujian.intelligentbi.model.entity.Chart;
 import com.liujian.intelligentbi.model.entity.User;
+import com.liujian.intelligentbi.model.vo.AIEnum;
+import com.liujian.intelligentbi.model.vo.BIResponse;
 import com.liujian.intelligentbi.model.vo.ChartVO;
 import com.liujian.intelligentbi.model.vo.UserVO;
 import com.liujian.intelligentbi.service.ChartService;
 import com.liujian.intelligentbi.mapper.ChartMapper;
 import com.liujian.intelligentbi.service.UserService;
+import com.liujian.intelligentbi.utils.ExcelUtils;
 import com.liujian.intelligentbi.utils.SqlUtils;
 import org.apache.commons.lang3.StringUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.CollectionUtils;
+import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
@@ -36,6 +42,9 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
     @Resource
     private UserService userService;
+
+    @Resource
+    private AIManager aiManager;
 
     @Override
     public QueryWrapper<Chart> getQueryWrapper(ChartQueryRequest chartQueryRequest) {
@@ -119,6 +128,61 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         }).collect(Collectors.toList());
         chartVOPage.setRecords(chartVOList);
         return chartVOPage;
+    }
+
+    @Override
+    public BIResponse genChartByAi(MultipartFile multipartFile, ChartByAiRequest chartByAiRequest, HttpServletRequest request) {
+        String chartName = chartByAiRequest.getChartName();
+        String chartType = chartByAiRequest.getChartType() == null || "".equals(chartByAiRequest.getChartType()) ? "折线图" : chartByAiRequest.getChartType();
+        String goal = chartByAiRequest.getGoal();
+
+        // 校验数据
+        ThrowUtils.throwIf(StringUtils.isBlank(goal) || goal.length() > 400, ErrorCode.PARAMS_ERROR, "分析目标为空或分析目标字数过长");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartName) || chartName.length() > 100, ErrorCode.PARAMS_ERROR, "图标名称为空或图标名称字数过长");
+
+        // 校验登录状态
+        User loginUser = userService.getLoginUser(request);
+
+        // 将传入的Excel转为CSV
+        String csvData = ExcelUtils.excelToCsv(multipartFile);
+
+        // 组装数据准备喂给AI
+        String userInput = "分析目标：" + "\n" +
+                goal  + "，使用" + chartType + "\n" +
+                "原始数据：" + "\n" +
+                csvData + "\n";
+
+        // 引入AI，进行提问得到回答
+        Long modelId = AIEnum.BI.getModelId();
+        String answer = aiManager.doChart(userInput, modelId);
+
+        // 拆分结果
+        String[] split = answer.split("=====");
+
+        if (split.length < 3) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR, "AI 生成数据失败");
+        }
+
+        // 将生成的图表记录信息保存到数据库
+        Chart chart = new Chart();
+        chart.setUserId(loginUser.getId());
+        chart.setChartName(chartName);
+        chart.setGoal(goal);
+        chart.setChartData(csvData);
+        chart.setChartType(chartType);
+        chart.setGenerateChart(split[1].trim());
+        chart.setGenerateResult(split[2].trim());
+
+        // 保存
+        this.save(chart);
+
+        // 构建返回对象
+        BIResponse biResponse = new BIResponse();
+        biResponse.setGenerateChart(split[1].trim());
+        biResponse.setGenerateResult(split[2].trim());
+        biResponse.setChartId(chart.getId());
+
+        return biResponse;
     }
 
 }
