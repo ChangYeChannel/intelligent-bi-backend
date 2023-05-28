@@ -5,8 +5,8 @@ spring:
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
     url: jdbc:mysql://192.168.131.101:3306/intelligent_bi
-    username: root
-    password: root
+    username: xxxxx
+    password: xxxxx
 mybatis-plus:
   configuration:
     # 生产环境关闭日志
