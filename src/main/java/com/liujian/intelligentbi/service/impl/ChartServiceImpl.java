@@ -1,6 +1,9 @@
 package com.liujian.intelligentbi.service.impl;
 
 import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.ObjectUtil;
+import com.alibaba.excel.EasyExcel;
+import com.alibaba.excel.support.ExcelTypeEnum;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -30,7 +33,9 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
+import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.ThreadLocalRandom;
 import java.util.stream.Collectors;
 
 /**
@@ -149,7 +154,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
         // 校验数据
         ThrowUtils.throwIf(StringUtils.isBlank(goal) || goal.length() > 400, ErrorCode.PARAMS_ERROR, "分析目标为空或分析目标字数过长");
-        ThrowUtils.throwIf(StringUtils.isBlank(chartName) || chartName.length() > 100, ErrorCode.PARAMS_ERROR, "图标名称为空或图标名称字数过长");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartName) || chartName.length() > 100, ErrorCode.PARAMS_ERROR, "图表名称为空或图表名称字数过长");
 
         // 校验文件（大小、后缀）
         long fileSize = multipartFile.getSize();
@@ -165,6 +170,9 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
         // 将传入的Excel转为CSV
         String csvData = ExcelUtils.excelToCsv(multipartFile);
+
+        // 将传入的Excel转储为一张表
+        String tableId = excelToDatabase(multipartFile);
 
         // 组装数据准备喂给AI
         String userInput = "分析目标：" + "\n" +
@@ -188,7 +196,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         chart.setUserId(loginUser.getId());
         chart.setChartName(chartName);
         chart.setGoal(goal);
-        chart.setChartData(csvData);
+        chart.setChartData(tableId);
         chart.setChartType(chartType);
         chart.setGenerateChart(split[1].trim());
         chart.setGenerateResult(split[2].trim());
@@ -203,6 +211,96 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         biResponse.setChartId(chart.getId());
 
         return biResponse;
+    }
+
+    /**
+     * 将传入的文件转储到数据库
+     * @param multipartFile  文件
+     * @return  数据库表名
+     */
+    private String excelToDatabase(MultipartFile multipartFile) {
+        // 生成用于建表的随机数表Id
+        String tableId = getRandomNum(10);
+
+        // 生成表名
+        String tableName = "chart_" + tableId;
+
+        // 读取数据
+        List<Map<Integer, String>> list = null;
+        try {
+            list = EasyExcel.read(multipartFile.getInputStream())
+                    .excelType(ExcelTypeEnum.XLSX)
+                    .sheet()
+                    .headRowNumber(0)
+                    .doReadSync();
+        } catch (IOException e) {
+            log.error("Excel数据读取异常：{}");
+        }
+
+        // 表头
+        LinkedHashMap<Integer, String> headerMap = null;
+        if (list != null) {
+            headerMap = (LinkedHashMap<Integer, String>) list.get(0);
+        }
+        // 过滤数据(因为有些数据可能为null，但是会null数据会参与表列中)
+        List<String> headerList = null;
+        if (headerMap != null) {
+            headerList = headerMap.values().stream().filter(ObjectUtil::isNotEmpty).collect(Collectors.toList());
+        }
+
+        // 封装建表语句
+        List<String> fields = new ArrayList<>();
+        List<String> filed = null;
+        if (headerList != null) {
+            filed = headerList.stream().map(item -> {
+                // 这里可以引用翻译的第三方云服务API来实现中文字段与英文字段之间的转译工作，例如：Google Translate API
+                // 组装建表语句，因为外层已经封装主键Id，所以此处封装的所有字段都采用varchar(50)类型
+                return "`" + item + "`" + " " + "VARCHAR(50)";
+            }).collect(Collectors.toList());
+        }
+        // 为了防止用户传入的表没有合适的字段用于作为主键，这里对所有表添加统一主键
+        fields.add("id INT PRIMARY KEY AUTO_INCREMENT");
+        // 添加建表字段
+        if (filed != null) {
+            fields.addAll(filed);
+        }
+
+        // 建表参数
+        Map<String, Object> params = new HashMap<>();
+        params.put("tableName", tableName);
+        params.put("fields", fields);
+
+        System.out.println(params);
+
+        // 建表操作
+        baseMapper.createTable(params);
+
+        // 封装插入表数据语句
+        Map<Integer, Object> data = new HashMap<>();
+        if (list != null) {
+            for (int i = 1; i < list.size(); i++) {
+                data.put(i,list.get(i).values());
+            }
+        }
+        params.remove("fields");
+        params.put("headerList", headerList.stream().map(item -> "`" + item + "`").collect(Collectors.toList()));
+        params.put("data", data);
+
+        System.out.println(params);
+        // 插入数据操作
+        baseMapper.insetTableValue(params);
+
+        // 返回表名
+        return tableName;
+    }
+
+    private String getRandomNum(int size) {
+        StringBuilder stringBuilder = new StringBuilder();
+        ThreadLocalRandom current = ThreadLocalRandom.current();
+        for (int i = 0; i < size; i++) {
+            stringBuilder.append(current.nextInt(10));
+        }
+        return stringBuilder.toString();
     }
 
 }

@@ -24,4 +24,29 @@
         generate_result,create_time,update_time,
         is_delete
     </sql>
+
+    <insert id="createTable" parameterType="Map">
+        create table ${tableName} (
+        <foreach collection="fields" item="item" separator=",">
+            ${item}
+        </foreach>
+        ) ENGINE=INNODB DEFAULT CHARSET=utf8;
+    </insert>
+
+    <insert id="insetTableValue" parameterType="Map">
+        insert into ${tableName}
+        (
+        <foreach collection="headerList" item="column" separator=",">
+            ${column}
+        </foreach>
+        )
+        values
+        <foreach collection="data" item="row" separator=",">
+            (
+            <foreach collection="row" item="value" separator=",">
+                #{value}
+            </foreach>
+            )
+        </foreach>
+    </insert>
 </mapper>
