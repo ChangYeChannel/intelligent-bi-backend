@@ -15,7 +15,7 @@ spring:
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://124.223.159.131:3306/intelligent_bi
+    url: jdbc:mysql://192.168.131.100:3306/intelligent_bi
     username: root
     password: root
 
@@ -28,7 +28,7 @@ spring:
   # redis配置
   redis:
     database: 0
-    host: 124.223.159.131
+    host: 192.168.131.100
     port: 6379
     timeout: 5000
     password: 315425
@@ -36,7 +36,7 @@ spring:
   # redisson配置
   redisson:
     database: 1
-    host: 124.223.159.131
+    host: 192.168.131.100
     port: 6379
     timeout: 5000
     password: 315425
