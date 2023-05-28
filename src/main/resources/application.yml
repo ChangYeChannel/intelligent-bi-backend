@@ -24,6 +24,23 @@ spring:
     multipart:
       # 大小限制
       max-file-size: 10MB
+
+  # redis配置
+  redis:
+    database: 0
+    host: 124.223.159.131
+    port: 6379
+    timeout: 5000
+    password: 315425
+
+  # redisson配置
+  redisson:
+    database: 1
+    host: 124.223.159.131
+    port: 6379
+    timeout: 5000
+    password: 315425
+
 server:
   port: 8101
   servlet:
@@ -41,6 +58,7 @@ mybatis-plus:
       logic-delete-field: is_delete # 全局逻辑删除的实体字段名
       logic-delete-value: 1 # 逻辑已删除值（默认为 1）
       logic-not-delete-value: 0 # 逻辑未删除值（默认为 0）
+
 
 # 鱼聪明AI接口密钥
 yuapi:

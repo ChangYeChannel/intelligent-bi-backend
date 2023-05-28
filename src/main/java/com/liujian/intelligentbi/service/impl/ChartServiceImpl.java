@@ -1,5 +1,6 @@
 package com.liujian.intelligentbi.service.impl;
 
+import cn.hutool.core.io.FileUtil;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
@@ -8,6 +9,7 @@ import com.liujian.intelligentbi.constant.CommonConstant;
 import com.liujian.intelligentbi.exception.BusinessException;
 import com.liujian.intelligentbi.exception.ThrowUtils;
 import com.liujian.intelligentbi.manager.AIManager;
+import com.liujian.intelligentbi.manager.RedisLimiterManager;
 import com.liujian.intelligentbi.model.dto.chart.ChartByAiRequest;
 import com.liujian.intelligentbi.model.dto.chart.ChartQueryRequest;
 import com.liujian.intelligentbi.model.entity.Chart;
@@ -28,9 +30,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 import java.util.stream.Collectors;
 
 /**
@@ -39,12 +39,23 @@ import java.util.stream.Collectors;
 @Service
 public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     implements ChartService{
+    /**
+     * 设置合法的文件大小
+     */
+    private final long ONE_MB = 1024 * 1024;
+    /**
+     * 设置合法的文件后缀
+     */
+    private final List<String> VALID_SUFFIX = Arrays.asList("xlsx","xls");
 
     @Resource
     private UserService userService;
 
     @Resource
     private AIManager aiManager;
+
+    @Resource
+    private RedisLimiterManager redisLimiterManager;
 
     @Override
     public QueryWrapper<Chart> getQueryWrapper(ChartQueryRequest chartQueryRequest) {
@@ -140,8 +151,17 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         ThrowUtils.throwIf(StringUtils.isBlank(goal) || goal.length() > 400, ErrorCode.PARAMS_ERROR, "分析目标为空或分析目标字数过长");
         ThrowUtils.throwIf(StringUtils.isBlank(chartName) || chartName.length() > 100, ErrorCode.PARAMS_ERROR, "图标名称为空或图标名称字数过长");
 
+        // 校验文件（大小、后缀）
+        long fileSize = multipartFile.getSize();
+        String fileName = multipartFile.getOriginalFilename();
+        ThrowUtils.throwIf(fileSize > 10 * ONE_MB, ErrorCode.PARAMS_ERROR, "上传的文件过大");
+        ThrowUtils.throwIf(!VALID_SUFFIX.contains(FileUtil.getSuffix(fileName)), ErrorCode.PARAMS_ERROR, "上传的文件后缀名不合规范");
+
         // 校验登录状态
         User loginUser = userService.getLoginUser(request);
+
+        // 限流校验
+        redisLimiterManager.doRateLimit("genChartByAi_" + loginUser.getId());
 
         // 将传入的Excel转为CSV
         String csvData = ExcelUtils.excelToCsv(multipartFile);
