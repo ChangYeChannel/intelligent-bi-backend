@@ -45,10 +45,6 @@ import java.util.stream.Collectors;
 public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     implements ChartService{
     /**
-     * 设置合法的文件大小
-     */
-    private final long ONE_MB = 1024 * 1024;
-    /**
      * 设置合法的文件后缀
      */
     private final List<String> VALID_SUFFIX = Arrays.asList("xlsx","xls");
@@ -159,6 +155,10 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         // 校验文件（大小、后缀）
         long fileSize = multipartFile.getSize();
         String fileName = multipartFile.getOriginalFilename();
+        /*
+          设置合法的文件大小
+         */
+        long ONE_MB = 1024 * 1024;
         ThrowUtils.throwIf(fileSize > 10 * ONE_MB, ErrorCode.PARAMS_ERROR, "上传的文件过大");
         ThrowUtils.throwIf(!VALID_SUFFIX.contains(FileUtil.getSuffix(fileName)), ErrorCode.PARAMS_ERROR, "上传的文件后缀名不合规范");
 
@@ -220,7 +220,7 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
      */
     private String excelToDatabase(MultipartFile multipartFile) {
         // 生成用于建表的随机数表Id
-        String tableId = getRandomNum(10);
+        String tableId = getRandomNum();
 
         // 生成表名
         String tableName = "chart_" + tableId;
@@ -283,7 +283,9 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
             }
         }
         params.remove("fields");
-        params.put("headerList", headerList.stream().map(item -> "`" + item + "`").collect(Collectors.toList()));
+        if (headerList != null) {
+            params.put("headerList", headerList.stream().map(item -> "`" + item + "`").collect(Collectors.toList()));
+        }
         params.put("data", data);
 
         System.out.println(params);
@@ -294,10 +296,10 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         return tableName;
     }
 
-    private String getRandomNum(int size) {
+    private String getRandomNum() {
         StringBuilder stringBuilder = new StringBuilder();
         ThreadLocalRandom current = ThreadLocalRandom.current();
-        for (int i = 0; i < size; i++) {
+        for (int i = 0; i < 10; i++) {
             stringBuilder.append(current.nextInt(10));
         }
         return stringBuilder.toString();
