@@ -15,9 +15,9 @@ spring:
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://124.223.159.131:3306/intelligent_bi
-    username: liujian
-    password: lj011017..
+    url: todo
+    username: todo
+    password: todo
 
   # 文件上传
   servlet:
@@ -28,19 +28,18 @@ spring:
   # redis配置
 #  redis:
 #    database: 0
-#    host: 192.168.131.100
-#    port: 6379
-#    timeout: 5000
+#    host: todo
+#    port: 
+#    timeout: 
 #    password:
 
   # redisson配置
   redisson:
     database: 1
-    host: 124.223.159.131
-    port: 6379
-    timeout: 5000
-    password: 315425
-
+    host: todo
+    port: 
+    timeout: 
+    password: 
 server:
   port: 8101
   servlet:
@@ -63,5 +62,5 @@ mybatis-plus:
 # 鱼聪明AI接口密钥
 yuapi:
   client:
-    access-key: ggvi4ab0l42ksux0bccjq7gfjcckceyu
-    secret-key: trlu06qard93rluh9am1wkds4p0mv5q2
+    access-key: todo
+    secret-key: todo
