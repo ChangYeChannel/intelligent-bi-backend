@@ -11,6 +11,8 @@ CREATE TABLE `chart` (
      `chart_type` varchar(128) COLLATE utf8mb4_unicode_ci DEFAULT NULL COMMENT '图表类型',
      `generate_chart` text COLLATE utf8mb4_unicode_ci COMMENT '生成的图表数据',
      `generate_result` text COLLATE utf8mb4_unicode_ci COMMENT '生成的分析结论',
+     `status` varchar(50) NOT NULL DEFAULT 'wait' COMMENT 'wait-[等待中], running-[执行中], succeed-[已完成], failed-[执行失败]',
+     `exec_message` varchar(128) NULL COMMENT '执行信息',
      `create_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
      `update_time` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '更新时间',
      `is_delete` tinyint(4) NOT NULL DEFAULT '0' COMMENT '是否删除',

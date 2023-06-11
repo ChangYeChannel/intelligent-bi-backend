@@ -17,6 +17,7 @@ import com.liujian.intelligentbi.model.dto.chart.ChartByAiRequest;
 import com.liujian.intelligentbi.model.dto.chart.ChartQueryRequest;
 import com.liujian.intelligentbi.model.entity.Chart;
 import com.liujian.intelligentbi.model.entity.User;
+import com.liujian.intelligentbi.model.enums.ChartStatusEnum;
 import com.liujian.intelligentbi.model.vo.AIEnum;
 import com.liujian.intelligentbi.model.vo.BIResponse;
 import com.liujian.intelligentbi.model.vo.ChartVO;
@@ -35,7 +36,9 @@ import javax.annotation.Resource;
 import javax.servlet.http.HttpServletRequest;
 import java.io.IOException;
 import java.util.*;
+import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ThreadLocalRandom;
+import java.util.concurrent.ThreadPoolExecutor;
 import java.util.stream.Collectors;
 
 /**
@@ -57,6 +60,8 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
 
     @Resource
     private RedisLimiterManager redisLimiterManager;
+    @Resource
+    private ThreadPoolExecutor threadPoolExecutor;
 
     @Override
     public QueryWrapper<Chart> getQueryWrapper(ChartQueryRequest chartQueryRequest) {
@@ -143,6 +148,101 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
     }
 
     @Override
+    public BIResponse genChartByAiAsync(MultipartFile multipartFile, ChartByAiRequest chartByAiRequest, HttpServletRequest request) {
+        String chartName = chartByAiRequest.getChartName();
+        String chartType = chartByAiRequest.getChartType() == null || "".equals(chartByAiRequest.getChartType()) ? "折线图" : chartByAiRequest.getChartType();
+        String goal = chartByAiRequest.getGoal();
+
+        // 校验数据
+        ThrowUtils.throwIf(StringUtils.isBlank(goal) || goal.length() > 400, ErrorCode.PARAMS_ERROR, "分析目标为空或分析目标字数过长");
+        ThrowUtils.throwIf(StringUtils.isBlank(chartName) || chartName.length() > 100, ErrorCode.PARAMS_ERROR, "图表名称为空或图表名称字数过长");
+
+        // 校验文件（大小、后缀）
+        long fileSize = multipartFile.getSize();
+        String fileName = multipartFile.getOriginalFilename();
+
+        /*
+          设置合法的文件大小
+         */
+        long ONE_MB = 1024 * 1024;
+        ThrowUtils.throwIf(fileSize > 10 * ONE_MB, ErrorCode.PARAMS_ERROR, "上传的文件过大");
+        ThrowUtils.throwIf(!VALID_SUFFIX.contains(FileUtil.getSuffix(fileName)), ErrorCode.PARAMS_ERROR, "上传的文件后缀名不合规范");
+
+        // 校验登录状态
+        User loginUser = userService.getLoginUser(request);
+
+        // 限流校验
+        redisLimiterManager.doRateLimit("genChartByAi_" + loginUser.getId());
+
+        // 将传入的Excel转为CSV
+        String csvData = ExcelUtils.excelToCsv(multipartFile);
+
+        // 将传入的Excel转储为一张表
+        String tableId = excelToDatabase(multipartFile);
+
+        // 组装数据准备喂给AI
+        String userInput = "分析目标：" + "\n" +
+                goal  + "，使用" + chartType + "\n" +
+                "原始数据：" + "\n" +
+                csvData + "\n";
+
+        // 保存要生成的图表记录，并且将记录的状态标记为等待执行
+        Chart chart = new Chart();
+        chart.setUserId(loginUser.getId());
+        chart.setChartName(chartName);
+        chart.setGoal(goal);
+        chart.setChartData(tableId);
+        chart.setChartType(chartType);
+        chart.setStatus(ChartStatusEnum.WAIT.getStatus());
+        this.save(chart);
+
+        // 开启一个线程，异步处理图表的生成
+        CompletableFuture.runAsync(() -> {
+            // 将图表记录的状态修改为正在执行中
+            Chart updateChartOnAi = new Chart();
+            updateChartOnAi.setId(chart.getId());
+            updateChartOnAi.setStatus(ChartStatusEnum.RUNNING.getStatus());
+            boolean flagOnAi = this.updateById(updateChartOnAi);
+            if (!flagOnAi) {
+                // 更新状态失败
+                handleChartUpdateError(chart.getId(),"修改记录为执行中状态时，修改发生错误");
+            }
+
+            // 引入AI，进行提问得到回答
+            Long modelId = AIEnum.BI.getModelId();
+            String answer = aiManager.doChart(userInput, modelId);
+
+            // 拆分结果
+            String[] split = answer.split("=====");
+
+            // AI的返回应该包含三部分，如果拆分的信息少于三部分则可以判断当前AI返回的信息存在错误，即生成数据失败
+            if (split.length < 3) {
+                // AI能力失败
+                handleChartUpdateError(chart.getId(),"调用AI能力生成数据时，修改发生错误");
+            }
+
+            // 将图表记录的状态修改为正在执行中
+            Chart updateChartDownAi = new Chart();
+            updateChartDownAi.setId(chart.getId());
+            updateChartDownAi.setGenerateChart(split[1].trim());
+            updateChartDownAi.setGenerateResult(split[2].trim());
+            updateChartDownAi.setStatus(ChartStatusEnum.SUCCEED.getStatus());
+            boolean flagDownAi = this.updateById(updateChartDownAi);
+            if (!flagDownAi) {
+                // 更新状态失败
+                handleChartUpdateError(chart.getId(),"修改记录为成功状态时，修改发生错误");
+            }
+
+        }, threadPoolExecutor);
+
+        // 构建返回对象
+        BIResponse biResponse = new BIResponse();
+        biResponse.setChartId(chart.getId());
+
+        return biResponse;
+    }
+
+    @Override
     public BIResponse genChartByAi(MultipartFile multipartFile, ChartByAiRequest chartByAiRequest, HttpServletRequest request) {
         String chartName = chartByAiRequest.getChartName();
         String chartType = chartByAiRequest.getChartType() == null || "".equals(chartByAiRequest.getChartType()) ? "折线图" : chartByAiRequest.getChartType();
@@ -211,6 +311,22 @@ public class ChartServiceImpl extends ServiceImpl<ChartMapper, Chart>
         biResponse.setChartId(chart.getId());
 
         return biResponse;
+    }
+
+    /**
+     * 根据传入的图表Id，将对应的图表记录的状态修改为失败并添加失败信息
+     * @param chartId  图表ID
+     * @param execMessage  失败信息
+     */
+    private void handleChartUpdateError(long chartId, String execMessage) {
+        Chart updateChartError = new Chart();
+        updateChartError.setId(chartId);
+        updateChartError.setStatus(ChartStatusEnum.FAILED.getStatus());
+        updateChartError.setExecMessage(execMessage);
+        boolean flag = this.updateById(updateChartError);
+        if (!flag) {
+            throw new BusinessException(ErrorCode.SYSTEM_ERROR,"修改图表为失败状态时，发生错误，修改失败；图表Id：" + chartId);
+        }
     }
 
     /**

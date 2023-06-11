@@ -146,4 +146,14 @@ public class ChartController {
         BIResponse biResponse = chartService.genChartByAi(multipartFile,chartByAiRequest,request);
         return ResultUtils.success(biResponse);
     }
+
+    /**
+     * 接受图表数据生成分析数据方法
+     */
+    @PostMapping("/genChart/async")
+    public BaseResponse<BIResponse> genChartByAiAsync(@RequestPart("file") MultipartFile multipartFile,
+                                                 ChartByAiRequest chartByAiRequest, HttpServletRequest request) {
+        BIResponse biResponse = chartService.genChartByAiAsync(multipartFile,chartByAiRequest,request);
+        return ResultUtils.success(biResponse);
+    }
 }

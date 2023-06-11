@@ -55,5 +55,14 @@ public interface ChartService extends IService<Chart> {
      * @param request  请求对象
      * @return  问题回答
      */
+    BIResponse genChartByAiAsync(MultipartFile multipartFile, ChartByAiRequest chartByAiRequest, HttpServletRequest request);
+
+    /**
+     * 根据传入的数据，利用AI生成问题回答
+     * @param multipartFile  原始数据
+     * @param chartByAiRequest  问题封装
+     * @param request  请求对象
+     * @return  问题回答
+     */
     BIResponse genChartByAi(MultipartFile multipartFile, ChartByAiRequest chartByAiRequest, HttpServletRequest request);
 }

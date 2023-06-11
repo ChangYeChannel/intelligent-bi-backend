@@ -3,7 +3,7 @@ spring:
     name: intelligent-bi-backend
   # 默认 dev 环境
   profiles:
-    active: test
+    active: dev
   # 支持 swagger3
   mvc:
     pathmatch:
@@ -15,9 +15,9 @@ spring:
   # 数据库配置
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://192.168.131.100:3306/intelligent_bi
-    username: xxxxx
-    password: xxxxx
+    url: jdbc:mysql://124.223.159.131:3306/intelligent_bi
+    username: liujian
+    password: lj011017..
 
   # 文件上传
   servlet:
@@ -36,10 +36,10 @@ spring:
   # redisson配置
   redisson:
     database: 1
-    host: 192.168.131.100
+    host: 124.223.159.131
     port: 6379
     timeout: 5000
-    password:
+    password: 315425
 
 server:
   port: 8101
@@ -63,5 +63,5 @@ mybatis-plus:
 # 鱼聪明AI接口密钥
 yuapi:
   client:
-    access-key: xxxx
-    secret-key: xxxx
+    access-key: ggvi4ab0l42ksux0bccjq7gfjcckceyu
+    secret-key: trlu06qard93rluh9am1wkds4p0mv5q2
